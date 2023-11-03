@@ -1,0 +1,40 @@
+version: "3.9"
+services:
+  worker:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile.celery
+    depends_on:
+      - rabbitmq
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile.scraper
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      worker:
+        condition: service_started
+  rabbitmq:
+    image: rabbitmq:3.12.7-management
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 5s
+      timeout: 5s
+      retries: 2
+      start_period: 15s
+    ports:
+      - 15672:15672
+  database:
+    image: postgres:16.0
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: example
+  flower:
+    image: mher/flower
+    command: celery --broker="amqp://@rabbitmq" flower --broker_api="http://guest:guest@rabbitmq:15672/api/"
+    ports:
+      - 5555:5555
+    depends_on:
+      rabbitmq:
+        condition: service_healthy

@@ -1,0 +1,8 @@
+FROM python:3.11.6-bookworm
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+RUN useradd -ms /bin/bash celery
+USER celery
+COPY ./ ./
+CMD [ "/bin/bash", "-c","celery -A tasks worker --loglevel=INFO" ]
